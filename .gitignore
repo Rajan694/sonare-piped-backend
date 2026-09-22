@@ -43,3 +43,9 @@ config.properties
 # OS
 .DS_Store
 Thumbs.db
+
+# Piped upstream additions
+bin/
+/data/
+VERSION
+*.txt

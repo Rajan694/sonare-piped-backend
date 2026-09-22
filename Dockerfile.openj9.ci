@@ -1,0 +1,11 @@
+FROM ibm-semeru-runtimes:open-17-jre
+
+WORKDIR /app/
+
+COPY ./piped.jar /app/piped.jar
+
+COPY VERSION .
+
+EXPOSE 8080
+
+CMD java -server -Xmx1G -Xaggressive -XX:+UnlockExperimentalVMOptions -XX:+OptimizeStringConcat -XX:+UseStringDeduplication -XX:+UseCompressedOops -XX:+UseNUMA -XX:+IdleTuningGcOnIdle -Xgcpolicy:gencon -Xshareclasses:allowClasspaths -Xtune:virtualized -Xcompactgc -jar /app/piped.jar

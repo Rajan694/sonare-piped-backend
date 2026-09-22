@@ -1,0 +1,71 @@
+plugins {
+    id "com.github.johnrengelman.shadow" version "8.1.1"
+    id "java"
+    id "eclipse"
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    implementation 'org.apache.commons:commons-lang3:3.18.0'
+    implementation 'org.apache.commons:commons-text:1.14.0'
+    implementation 'commons-io:commons-io:2.20.0'
+    implementation 'it.unimi.dsi:fastutil-core:8.5.16'
+    implementation 'commons-codec:commons-codec:1.19.0'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.81'
+    implementation('com.github.TeamNewPipe:NewPipeExtractor:13a655fe53e0c3065f88725fc1fb594c3ede0169') {
+        exclude group: 'com.github.TeamNewPipe', module: 'nanojson'
+    }
+    implementation 'com.github.TeamNewPipe:nanojson:e9d656ddb49a412a5a0a5d5ef20ca7ef09549996'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.19.2'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.19.2'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.19.2'
+    implementation 'com.rometools:rome:2.1.0'
+    implementation 'com.rometools:rome-modules:2.1.0'
+    implementation 'org.jsoup:jsoup:1.21.2'
+    implementation 'io.activej:activej-common:5.5'
+    implementation 'io.activej:activej-http:5.5'
+    implementation 'io.activej:activej-boot:5.5'
+    implementation 'io.activej:activej-specializer:5.5'
+    implementation 'io.activej:activej-launchers-http:5.5'
+    implementation 'org.hsqldb:hsqldb:2.7.4'
+    implementation 'org.postgresql:postgresql:42.7.7'
+    implementation 'org.hibernate:hibernate-core:6.4.1.Final'
+    implementation 'org.hibernate:hibernate-hikaricp:6.4.1.Final'
+    implementation 'org.liquibase:liquibase-core:4.33.0'
+    implementation('org.liquibase.ext:liquibase-yugabytedb:4.33.0') { exclude group: 'org.liquibase' }
+    implementation 'com.zaxxer:HikariCP:6.3.2'
+    implementation 'org.springframework.security:spring-security-crypto:6.5.3'
+    implementation 'commons-logging:commons-logging:1.3.5'
+    implementation(platform("com.squareup.okhttp3:okhttp-bom:5.1.0"))
+    implementation 'com.squareup.okhttp3:okhttp'
+    implementation 'com.squareup.okhttp3:okhttp-brotli'
+    implementation 'io.sentry:sentry:8.19.1'
+    implementation 'rocks.kavin:reqwest4j:1.0.14'
+    implementation 'io.minio:minio:8.5.17'
+    compileOnly 'org.projectlombok:lombok:1.18.38'
+    annotationProcessor 'org.projectlombok:lombok:1.18.38'
+}
+
+shadowJar {
+    // minimize()
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'me.kavin.piped.Main'
+        )
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+group = 'me.kavin.piped'
+version = '1.0'

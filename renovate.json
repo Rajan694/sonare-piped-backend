@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    "group:recommended"
+  ],
+  "ignorePresets": [
+    ":prHourlyLimit2"
+  ],
+  "packageRules": [
+    {
+      "matchPackagePrefixes": [
+        "io.activej:"
+      ],
+      "groupName": "activej"
+    },
+    {
+      "matchPackagePrefixes": [
+        "com.fasterxml.jackson"
+      ],
+      "groupName": "jackson"
+    },
+    {
+      "matchPackagePrefixes": [
+        "org.liquibase"
+      ],
+      "groupName": "liquibase"
+    },
+    {
+      "matchPackagePrefixes": [
+        "com.github.firemasterk."
+      ],
+      "groupName": "Personal Forks",
+      "enabled": false
+    }
+  ],
+  "ignoreDeps": [
+    "com.github.FireMasterK.NewPipeExtractor:NewPipeExtractor"
+  ]
+}

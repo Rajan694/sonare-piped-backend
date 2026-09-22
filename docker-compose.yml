@@ -1,0 +1,31 @@
+services:
+    piped:
+        image: 1337kavin/piped:latest
+        restart: unless-stopped
+        ports:
+            - "127.0.0.1:8080:8080"
+        volumes:
+            - ./config.properties:/app/config.properties
+        depends_on:
+            - postgres
+            - piped-proxy
+            - bg-helper
+    # Serves the media URLs the frontend actually fetches. Without it PROXY_PART
+    # points at a public instance, which returns 502 and breaks playback.
+    piped-proxy:
+        image: 1337kavin/piped-proxy:latest
+        restart: unless-stopped
+        ports:
+            - "127.0.0.1:8081:8080"
+    bg-helper:
+        image: 1337kavin/bg-helper-server:latest
+        restart: unless-stopped
+    postgres:
+        image: postgres:17-alpine
+        restart: unless-stopped
+        volumes:
+            - ./data/db:/var/lib/postgresql/data
+        environment:
+            - POSTGRES_DB=piped
+            - POSTGRES_USER=piped
+            - POSTGRES_PASSWORD=changeme

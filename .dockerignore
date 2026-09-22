@@ -1,0 +1,11 @@
+.*
+build
+bin
+Dockerfile*
+docker-compose.yml
+*.bat
+LICENSE
+*.md
+config.properties
+data/
+testing/
