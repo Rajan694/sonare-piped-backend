@@ -1,9 +1,14 @@
 services:
+    # Built from this directory, not 1337kavin/piped:latest: the published image predates
+    # NewPipeExtractor's lockupViewModel playlist fix (27bbabc8), so every playlist and
+    # album came back with an empty relatedStreams. build.gradle pins an extractor that
+    # has the fix; rebuild with `./runPiped.sh up` (it passes --build).
     piped:
-        image: 1337kavin/piped:latest
+        build: .
+        image: sonare-piped:local
         restart: unless-stopped
         ports:
-            - "127.0.0.1:8080:8080"
+            - "127.0.0.1:8090:8080"
         volumes:
             - ./config.properties:/app/config.properties
         depends_on:
@@ -16,7 +21,7 @@ services:
         image: 1337kavin/piped-proxy:latest
         restart: unless-stopped
         ports:
-            - "127.0.0.1:8081:8080"
+            - "127.0.0.1:8091:8080"
     bg-helper:
         image: 1337kavin/bg-helper-server:latest
         restart: unless-stopped
