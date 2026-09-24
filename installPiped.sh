@@ -22,8 +22,14 @@ if [ ! -f config.properties ]; then
     cp config.properties.example config.properties
 fi
 
+# The piped service is built from this directory (sonare-piped:local), so it has
+# no registry to pull from - pull the upstream images and build that one.
 echo "=== Pulling images ==="
-docker compose pull
+docker compose pull --ignore-buildable
+
+echo ""
+echo "=== Building sonare-piped:local ==="
+docker compose build piped
 
 echo ""
 echo "Piped ready. Start it with ./runPiped.sh"
