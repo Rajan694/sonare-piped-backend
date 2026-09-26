@@ -42,6 +42,13 @@ if [ ! -f config.properties ]; then
     exit 1
 fi
 
+# Settings saved on the Sonare admin page: the extractor commit (build.gradle, so it rebuilds
+# below) and the proxy URL (config.properties, which Piped only reads at startup).
+CONFIG_BEFORE="$(sha256sum config.properties)"
+./syncAdminConfig.sh
+[ "$CONFIG_BEFORE" != "$(sha256sum config.properties)" ] && CONFIG_CHANGED=1 || CONFIG_CHANGED=0
+echo ""
+
 # 8091 is the proxy port. A stale compose project from elsewhere holding it is a
 # common cause of a confusing bind failure, so name that possibility up front.
 if ss -ltn 2>/dev/null | grep -q ':8091 '; then
@@ -83,6 +90,11 @@ elif ! docker compose up -d --build; then
     echo "WARNING: rebuilding $IMAGE failed (is Docker Hub reachable?)."
     echo "  Starting the previous build, which does not have your latest changes to the Piped source."
     docker compose up -d --no-build || exit 1
+fi
+
+if [ "$CONFIG_CHANGED" = "1" ]; then
+    echo "config.properties changed - restarting piped to load it."
+    docker compose restart piped || exit 1
 fi
 
 echo "=== Waiting for the API ==="

@@ -22,6 +22,10 @@ if [ ! -f config.properties ]; then
     cp config.properties.example config.properties
 fi
 
+# Settings saved on the Sonare admin page, so the build below uses them.
+./syncAdminConfig.sh
+echo ""
+
 # The piped service is built from this directory (sonare-piped:local), so it has
 # no registry to pull from - pull the upstream images and build that one.
 echo "=== Pulling images ==="
