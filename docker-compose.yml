@@ -1,0 +1,39 @@
+services:
+    # Built from this directory, not 1337kavin/piped:latest: the published image predates
+    # NewPipeExtractor's lockupViewModel playlist fix (27bbabc8), so every playlist and
+    # album came back with an empty relatedStreams. build.gradle pins an extractor that
+    # has the fix; `./runPiped.sh up` rebuilds whenever the source hash below changes.
+    piped:
+        build:
+            context: .
+            labels:
+                sonare.src-hash: "${PIPED_SRC_HASH:-}"
+        image: sonare-piped:local
+        restart: unless-stopped
+        ports:
+            - "127.0.0.1:8090:8080"
+        volumes:
+            - ./config.properties:/app/config.properties
+        depends_on:
+            - postgres
+            - piped-proxy
+            - bg-helper
+    # Serves the media URLs the frontend actually fetches. Without it PROXY_PART
+    # points at a public instance, which returns 502 and breaks playback.
+    piped-proxy:
+        image: 1337kavin/piped-proxy:latest
+        restart: unless-stopped
+        ports:
+            - "127.0.0.1:8091:8080"
+    bg-helper:
+        image: 1337kavin/bg-helper-server:latest
+        restart: unless-stopped
+    postgres:
+        image: postgres:17-alpine
+        restart: unless-stopped
+        volumes:
+            - ./data/db:/var/lib/postgresql/data
+        environment:
+            - POSTGRES_DB=piped
+            - POSTGRES_USER=piped
+            - POSTGRES_PASSWORD=changeme
