@@ -52,10 +52,38 @@ if ss -ltn 2>/dev/null | grep -q ':8091 '; then
     fi
 fi
 
+# What goes into the piped image. Only a change here rebuilds it: even a fully cached build
+# asks Docker Hub about the eclipse-temurin base images, and with no network (or DNS down)
+# that fails after a long timeout and takes the whole start with it.
+src_hash() {
+    find src gradle build.gradle settings.gradle gradlew VERSION Dockerfile .dockerignore \
+        hotspot-entrypoint.sh docker-healthcheck.sh -type f -print0 \
+        | sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16
+}
+
 echo "=== Starting Piped (docker) ==="
-# --build: the piped service is built from this source tree. Docker's layer cache makes
-# this a no-op when nothing changed; the first build takes a few minutes (Gradle).
-docker compose up -d --build
+IMAGE=sonare-piped:local
+# docker-compose.yml stamps the image with this, so the next start can compare.
+export PIPED_SRC_HASH="$(src_hash)"
+if BUILT_HASH="$(docker image inspect -f '{{index .Config.Labels "sonare.src-hash"}}' "$IMAGE" 2>/dev/null)"; then
+    HAVE_IMAGE=1
+else
+    HAVE_IMAGE=0
+fi
+
+if [ "$HAVE_IMAGE" = "1" ] && [ "$BUILT_HASH" = "$PIPED_SRC_HASH" ]; then
+    docker compose up -d --no-build || exit 1
+elif ! docker compose up -d --build; then
+    # The first build takes a few minutes (Gradle) and needs Docker Hub.
+    if [ "$HAVE_IMAGE" != "1" ]; then
+        echo "Could not build $IMAGE, and there is no earlier build to fall back to."
+        echo "The first build needs Docker Hub - check the network and DNS, then retry."
+        exit 1
+    fi
+    echo "WARNING: rebuilding $IMAGE failed (is Docker Hub reachable?)."
+    echo "  Starting the previous build, which does not have your latest changes to the Piped source."
+    docker compose up -d --no-build || exit 1
+fi
 
 echo "=== Waiting for the API ==="
 for i in $(seq 1 30); do

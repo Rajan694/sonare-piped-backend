@@ -2,9 +2,12 @@ services:
     # Built from this directory, not 1337kavin/piped:latest: the published image predates
     # NewPipeExtractor's lockupViewModel playlist fix (27bbabc8), so every playlist and
     # album came back with an empty relatedStreams. build.gradle pins an extractor that
-    # has the fix; rebuild with `./runPiped.sh up` (it passes --build).
+    # has the fix; `./runPiped.sh up` rebuilds whenever the source hash below changes.
     piped:
-        build: .
+        build:
+            context: .
+            labels:
+                sonare.src-hash: "${PIPED_SRC_HASH:-}"
         image: sonare-piped:local
         restart: unless-stopped
         ports:
