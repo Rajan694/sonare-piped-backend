@@ -87,6 +87,8 @@ hibernate.connection.url:jdbc:postgresql://postgres:5432/piped
 hibernate.connection.driver_class:org.postgresql.Driver
 hibernate.dialect:org.hibernate.dialect.PostgreSQLDialect
 hibernate.connection.username:piped
+# Must equal the database password: PIPED_DB_PASSWORD in the environment docker compose
+# runs with (default changeme, development only). Set both to a strong value in production.
 hibernate.connection.password:changeme
 
 # Frontend configuration

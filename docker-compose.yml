@@ -36,4 +36,6 @@ services:
         environment:
             - POSTGRES_DB=piped
             - POSTGRES_USER=piped
-            - POSTGRES_PASSWORD=changeme
+            # Development default; production must set PIPED_DB_PASSWORD (and the same value as
+            # hibernate.connection.password in config.properties).
+            - POSTGRES_PASSWORD=${PIPED_DB_PASSWORD:-changeme}
