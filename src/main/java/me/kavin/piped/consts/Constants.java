@@ -22,6 +22,7 @@ import org.schabi.newpipe.extractor.localization.ContentCountry;
 import java.io.File;
 import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -154,8 +155,12 @@ public class Constants {
             FEED_REFRESH = Boolean.parseBoolean(getProperty(prop, "FEED_REFRESH", "false"));
             FEED_REFRESH_MINUTES = Integer.parseInt(getProperty(prop, "FEED_REFRESH_MINUTES", "15"));
             RYD_PROXY_URL = getProperty(prop, "RYD_PROXY_URL", "https://ryd-proxy.kavin.rocks");
-            SPONSORBLOCK_SERVERS = List.of(getProperty(prop, "SPONSORBLOCK_SERVERS", "https://sponsor.ajay.app,https://sponsorblock.kavin.rocks")
-                    .split(","));
+            // Empty in Sonare's config: it never asks for segments, so no server is contacted.
+            SPONSORBLOCK_SERVERS = Arrays.stream(getProperty(prop, "SPONSORBLOCK_SERVERS", "https://sponsor.ajay.app,https://sponsorblock.kavin.rocks")
+                    .split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
             DISABLE_RYD = Boolean.parseBoolean(getProperty(prop, "DISABLE_RYD", "false"));
             DISABLE_SERVER = Boolean.parseBoolean(getProperty(prop, "DISABLE_SERVER", "false"));
             DISABLE_LBRY = Boolean.parseBoolean(getProperty(prop, "DISABLE_LBRY", "false"));

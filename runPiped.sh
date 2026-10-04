@@ -72,6 +72,14 @@ echo "=== Starting Piped (docker) ==="
 IMAGE=sonare-piped:local
 # docker-compose.yml stamps the image with this, so the next start can compare.
 export PIPED_SRC_HASH="$(src_hash)"
+# The last image that started healthy, saved below. Building needs JitPack (the extractor)
+# and Docker Hub; if the image is gone (pruned, new machine) this restores it without either.
+BACKUP_DIR="$SCRIPT_DIR/image-backup"
+BACKUP="$BACKUP_DIR/sonare-piped.tar.gz"
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1 && [ -f "$BACKUP" ]; then
+    echo "No $IMAGE image - restoring the last good build from image-backup/"
+    gunzip -c "$BACKUP" | docker load || echo "WARNING: could not load $BACKUP"
+fi
 if BUILT_HASH="$(docker image inspect -f '{{index .Config.Labels "sonare.src-hash"}}' "$IMAGE" 2>/dev/null)"; then
     HAVE_IMAGE=1
 else
@@ -84,10 +92,10 @@ elif ! docker compose up -d --build; then
     # The first build takes a few minutes (Gradle) and needs Docker Hub.
     if [ "$HAVE_IMAGE" != "1" ]; then
         echo "Could not build $IMAGE, and there is no earlier build to fall back to."
-        echo "The first build needs Docker Hub - check the network and DNS, then retry."
+        echo "The first build needs Docker Hub and jitpack.io - check the network and DNS, then retry."
         exit 1
     fi
-    echo "WARNING: rebuilding $IMAGE failed (is Docker Hub reachable?)."
+    echo "WARNING: rebuilding $IMAGE failed (are Docker Hub and jitpack.io reachable?)."
     echo "  Starting the previous build, which does not have your latest changes to the Piped source."
     docker compose up -d --no-build || exit 1
 fi
@@ -96,6 +104,21 @@ if [ "$CONFIG_CHANGED" = "1" ]; then
     echo "config.properties changed - restarting piped to load it."
     docker compose restart piped || exit 1
 fi
+
+# Saves the image once it has started healthy, only when it differs from the saved one.
+backup_image() {
+    local id
+    id="$(docker image inspect -f '{{.Id}}' "$IMAGE" 2>/dev/null)" || return 0
+    [ "$id" = "$(cat "$BACKUP_DIR/image-id" 2>/dev/null)" ] && return 0
+    echo "Saving this build to image-backup/ (a fallback if jitpack.io or Docker Hub is down)..."
+    mkdir -p "$BACKUP_DIR"
+    if docker save "$IMAGE" | gzip -1 > "$BACKUP.tmp"; then
+        mv "$BACKUP.tmp" "$BACKUP" && echo "$id" > "$BACKUP_DIR/image-id"
+    else
+        rm -f "$BACKUP.tmp"
+        echo "WARNING: could not save the image backup."
+    fi
+}
 
 echo "=== Waiting for the API ==="
 for i in $(seq 1 30); do
@@ -106,6 +129,7 @@ for i in $(seq 1 30); do
         if ! docker compose ps --status running 2>/dev/null | grep -q bg-helper; then
             echo "WARNING: bg-helper is not running - expect empty audioStreams."
         fi
+        backup_image
         exit 0
     fi
     sleep 2

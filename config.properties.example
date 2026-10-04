@@ -25,8 +25,8 @@ API_URL:https://pipedapi.kavin.rocks
 # Public Frontend URL
 FRONTEND_URL:https://piped.video
 
-# Enable haveibeenpwned compromised password API
-COMPROMISED_PASSWORD_CHECK:true
+# Enable haveibeenpwned compromised password API (off: Sonare doesn't use Piped accounts)
+COMPROMISED_PASSWORD_CHECK:false
 
 # Disable Registration
 DISABLE_REGISTRATION:false
@@ -41,11 +41,12 @@ DISABLE_TIMERS:false
 RYD_PROXY_URL:https://ryd-proxy.kavin.rocks
 
 # SponsorBlock Servers(s)
-# Comma separated list of SponsorBlock Servers to use
-SPONSORBLOCK_SERVERS:https://sponsor.ajay.app,https://sponsorblock.kavin.rocks
+# Comma separated list of SponsorBlock Servers to use (empty: Sonare doesn't skip segments)
+SPONSORBLOCK_SERVERS:
 
-# Disable the usage of RYD
-DISABLE_RYD:false
+# Disable the usage of RYD (on: otherwise every /streams call sends the video id to the RYD proxy
+# for a dislike count Sonare never shows)
+DISABLE_RYD:true
 
 # Disable API server (node just runs timers if enabled)
 DISABLE_SERVER:false
@@ -64,8 +65,8 @@ CONSENT_COOKIE:true
 # Use Sentry to log errors and trace performance
 #SENTRY_DSN:INSERT_HERE
 
-# Matrix Client Server URL
-MATRIX_SERVER:https://matrix-client.matrix.org
+# Matrix Client Server URL (empty: no federated subscription sync, no connection to matrix.org)
+MATRIX_SERVER:
 # Matrix Access Token
 # If not present, will work in anon mode
 #MATRIX_TOKEN:INSERT_HERE

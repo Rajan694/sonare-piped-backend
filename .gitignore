@@ -49,3 +49,6 @@ bin/
 /data/
 VERSION
 *.txt
+
+# Last good sonare-piped image, written by runPiped.sh
+image-backup/
