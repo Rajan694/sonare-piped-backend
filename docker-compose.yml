@@ -21,8 +21,9 @@ services:
     # Serves the media URLs the frontend actually fetches. Without it PROXY_PART
     # points at a public instance, which returns 502 and breaks playback.
     # proxy and bg-helper are pinned by digest: :latest is republished without notice and
-    # has changed under us before. To move on, pull the new :latest, test playback, then
-    # copy its digest from `docker images --digests` here.
+    # has changed under us before. bg-helper moves with `./runPiped.sh bump --bg-helper`;
+    # for the proxy, pull the new :latest, run `./runPiped.sh check`, then copy its digest
+    # from `docker images --digests` here.
     piped-proxy:
         image: 1337kavin/piped-proxy@sha256:e10c9474fdea1ddf09267a57c24d25a8c20ffbd96ac356db4b71d821f898e702
         restart: unless-stopped

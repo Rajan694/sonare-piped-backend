@@ -11,12 +11,25 @@
 # A setting left empty on the admin page leaves its file alone. This never fails the
 # caller: without psql or the database it says so and changes nothing.
 #
+#   ./syncAdminConfig.sh --set-commit <sha>
+#       The other direction, for `./runPiped.sh bump`: if a commit is saved on the admin
+#       page, replace it with <sha>, so the next start doesn't put the old one back.
+#
 # The database comes from SONARE_DATABASE_URL, or DATABASE_URL in ../sonare-backend/.env.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-echo "=== Applying admin settings ==="
+SET_COMMIT=""
+if [ "${1:-}" = "--set-commit" ]; then
+    SET_COMMIT="${2:-}"
+    if ! [[ "$SET_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+        echo "Usage: ./syncAdminConfig.sh --set-commit <40-character commit hash>"
+        exit 1
+    fi
+else
+    echo "=== Applying admin settings ==="
+fi
 
 DB_URL="${SONARE_DATABASE_URL:-}"
 if [ -z "$DB_URL" ] && [ -f ../sonare-backend/.env ]; then
@@ -28,6 +41,24 @@ if [ -z "$DB_URL" ]; then
 fi
 if ! command -v psql >/dev/null 2>&1; then
     echo "  skipped: psql is not installed"
+    exit 0
+fi
+
+if [ -n "$SET_COMMIT" ]; then
+    # Only a saved value is replaced: with none, build.gradle alone decides and stays in charge.
+    # On stdin, not -c: psql only substitutes :'sha' in scripts it reads.
+    if UPDATED="$(psql "$DB_URL" -X -q -t -A -v ON_ERROR_STOP=1 -v sha="$SET_COMMIT" 2>&1 <<'SQL'
+UPDATE system_configuration SET value = to_jsonb(:'sha'::text), updated_at = now(),
+       updated_by = 'runPiped.sh bump'
+ WHERE key = 'piped.extractorCommit' AND coalesce(value #>> '{}', '') <> ''
+RETURNING key;
+SQL
+)"; then
+        [ -n "$UPDATED" ] && echo "  admin page: saved extractor commit -> ${SET_COMMIT:0:12}"
+    else
+        echo "  admin page: could not update the saved commit ($(echo "$UPDATED" | head -1))"
+        echo "              set it to $SET_COMMIT on /admin > Configuration, or the next start reverts it"
+    fi
     exit 0
 fi
 
