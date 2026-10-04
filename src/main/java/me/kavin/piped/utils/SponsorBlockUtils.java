@@ -79,6 +79,11 @@ public class SponsorBlockUtils {
 
         CompletableFuture<Optional<JsonNode>> future = new CompletableFuture<>();
 
+        if (servers.length == 0) {
+            future.completeExceptionally(new Exception("No SponsorBlock servers configured"));
+            return future;
+        }
+
         var task = ForkJoinTask.adapt(() -> {
             fetchDeArrowedCf(future, videoId, hash, servers);
         });

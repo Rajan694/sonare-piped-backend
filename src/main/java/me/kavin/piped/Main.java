@@ -87,11 +87,14 @@ public class Main {
             System.exit(1);
         }
 
-        Multithreading.runAsync(() -> Thread.ofVirtual().start(new SyncRunner(
-                new OkHttpClient.Builder().readTimeout(60, TimeUnit.SECONDS).build(),
-                MATRIX_SERVER,
-                MatrixHelper.MATRIX_TOKEN)
-        ));
+        // Federated subscription events over Matrix. Sonare doesn't use them, and with
+        // MATRIX_SERVER left empty Piped keeps no connection open to matrix.org.
+        if (StringUtils.isNotBlank(MATRIX_SERVER))
+            Multithreading.runAsync(() -> Thread.ofVirtual().start(new SyncRunner(
+                    new OkHttpClient.Builder().readTimeout(60, TimeUnit.SECONDS).build(),
+                    MATRIX_SERVER,
+                    MatrixHelper.MATRIX_TOKEN)
+            ));
 
         new Timer().scheduleAtFixedRate(new TimerTask() {
             @Override

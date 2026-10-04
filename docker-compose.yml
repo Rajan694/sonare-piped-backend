@@ -20,13 +20,17 @@ services:
             - bg-helper
     # Serves the media URLs the frontend actually fetches. Without it PROXY_PART
     # points at a public instance, which returns 502 and breaks playback.
+    # proxy and bg-helper are pinned by digest: :latest is republished without notice and
+    # has changed under us before. bg-helper moves with `./runPiped.sh bump --bg-helper`;
+    # for the proxy, pull the new :latest, run `./runPiped.sh check`, then copy its digest
+    # from `docker images --digests` here.
     piped-proxy:
-        image: 1337kavin/piped-proxy:latest
+        image: 1337kavin/piped-proxy@sha256:e10c9474fdea1ddf09267a57c24d25a8c20ffbd96ac356db4b71d821f898e702
         restart: unless-stopped
         ports:
             - "127.0.0.1:8091:8080"
     bg-helper:
-        image: 1337kavin/bg-helper-server:latest
+        image: 1337kavin/bg-helper-server@sha256:be55faab8780599cd951206f73ad1ab5b33a2c1c148eaad7f7c2403e00561729
         restart: unless-stopped
     postgres:
         image: postgres:17-alpine
@@ -36,4 +40,6 @@ services:
         environment:
             - POSTGRES_DB=piped
             - POSTGRES_USER=piped
-            - POSTGRES_PASSWORD=changeme
+            # Development default; production must set PIPED_DB_PASSWORD (and the same value as
+            # hibernate.connection.password in config.properties).
+            - POSTGRES_PASSWORD=${PIPED_DB_PASSWORD:-changeme}
