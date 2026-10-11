@@ -116,7 +116,7 @@ bump_extractor() {
     docker compose up -d --no-build piped || return 1
 
     if wait_healthy && ./checkPiped.sh; then
-        ./syncAdminConfig.sh --set-commit "$new"
+        ./syncEnvConfig.sh --set-commit "$new"
         backup_image
         echo "NewPipeExtractor is now ${new:0:12}. Commit build.gradle to keep it."
         return 0
@@ -218,10 +218,10 @@ if [ ! -f config.properties ]; then
     exit 1
 fi
 
-# Settings saved on the Sonare admin page: the extractor commit (build.gradle, so it rebuilds
-# below) and the proxy URL (config.properties, which Piped only reads at startup).
+# Settings in .env: the extractor commit (build.gradle, so it rebuilds below) and the proxy
+# URL (config.properties, which Piped only reads at startup).
 CONFIG_BEFORE="$(sha256sum config.properties)"
-./syncAdminConfig.sh
+./syncEnvConfig.sh
 [ "$CONFIG_BEFORE" != "$(sha256sum config.properties)" ] && CONFIG_CHANGED=1 || CONFIG_CHANGED=0
 echo ""
 

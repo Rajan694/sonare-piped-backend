@@ -13,8 +13,8 @@ stream URLs that 403 after ~1 MB.
 
 - **Extractor:** `./runPiped.sh bump` moves NewPipeExtractor to the newest commit on its `dev`
   branch (or `./runPiped.sh bump <commit>`), rebuilds, checks, and rolls back to the backed-up
-  image if the check fails. It also updates the commit saved on the admin page, so the next
-  `up` doesn't put the old one back. Commit `build.gradle` afterwards.
+  image if the check fails. If `.env` pins `PIPED_EXTRACTOR_COMMIT` it updates that too, so
+  the next `up` doesn't put the old one back. Commit `build.gradle` afterwards.
 - **Bot detection:** `./runPiped.sh bump --bg-helper` does the same for the bg-helper image:
   pins its newest digest, checks, and restores the old pin on failure. Commit
   `docker-compose.yml` afterwards.
@@ -22,13 +22,24 @@ stream URLs that 403 after ~1 MB.
 The first build of a new extractor commit waits on JitPack, which can fail the first time
 while it compiles; run the bump again.
 
+## Settings (.env)
+
+`.env` (copied from `.env.example` by `./installPiped.sh`) holds the deploy settings.
+`./runPiped.sh up` and `./installPiped.sh` copy them into the Piped files through
+`syncEnvConfig.sh`; an empty value leaves the file as it is.
+
+- `PIPED_PROXY_URL`: the piped-proxy base Piped rewrites media URLs to (`PROXY_PART` in
+  `config.properties`). Change it when the proxy moves off localhost.
+- `PIPED_EXTRACTOR_COMMIT`: the NewPipeExtractor commit in `build.gradle`; a new one rebuilds
+  the image.
+
 ## Database password
 
 `docker-compose.yml` reads the Postgres password from `PIPED_DB_PASSWORD` and falls back to
 `changeme`, which is only acceptable on a development machine. In production:
 
-1. Export a strong `PIPED_DB_PASSWORD` (or put it in a `.env` file next to
-   `docker-compose.yml`, which docker compose reads) before `./runPiped.sh up`.
+1. Set a strong `PIPED_DB_PASSWORD` in `.env` (docker compose reads it) before
+   `./runPiped.sh up`.
 2. Set `hibernate.connection.password` in `config.properties` to the same value.
 
 Postgres only applies the password when it first creates `data/db`; to change it on an

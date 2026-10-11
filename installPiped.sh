@@ -22,8 +22,13 @@ if [ ! -f config.properties ]; then
     cp config.properties.example config.properties
 fi
 
-# Settings saved on the Sonare admin page, so the build below uses them.
-./syncAdminConfig.sh
+if [ ! -f .env ]; then
+    echo "=== Creating .env from .env.example ==="
+    cp .env.example .env
+fi
+
+# Settings in .env, so the build below uses them.
+./syncEnvConfig.sh
 echo ""
 
 # The piped service is built from this directory (sonare-piped:local), so it has
