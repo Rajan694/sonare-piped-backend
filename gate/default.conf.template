@@ -3,20 +3,16 @@
 # as X-Sonare-Key (PIPED_KEY in both .env files). The nginx image fills in ${PIPED_KEY} when
 # the container starts.
 
-map $http_x_sonare_key $sonare_key_ok {
-    default 0;
-    "${PIPED_KEY}" 1;
-}
-
 # Piped's API (Funnel :443).
 server {
     listen 8092;
     server_tokens off;
 
     location / {
-        # An empty key never passes, even when PIPED_KEY itself is empty.
+        # An empty key never passes, even when PIPED_KEY itself is empty. (A plain comparison:
+        # a map of the 64-character key overflows nginx's default map_hash_bucket_size.)
         if ($http_x_sonare_key = "") { return 403; }
-        if ($sonare_key_ok = 0) { return 403; }
+        if ($http_x_sonare_key != "${PIPED_KEY}") { return 403; }
         limit_except GET HEAD { deny all; }
         proxy_set_header X-Sonare-Key "";
         proxy_pass http://piped:8080;
@@ -32,7 +28,7 @@ server {
 
     location / {
         if ($http_x_sonare_key = "") { return 403; }
-        if ($sonare_key_ok = 0) { return 403; }
+        if ($http_x_sonare_key != "${PIPED_KEY}") { return 403; }
         limit_except GET HEAD { deny all; }
         proxy_set_header X-Sonare-Key "";
         proxy_pass http://piped-proxy:8080;
