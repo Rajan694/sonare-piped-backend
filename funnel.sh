@@ -141,17 +141,26 @@ cmd_up() {
 
     echo ""
     echo "=== Checking from the internet side (the first certificate can take a minute) ==="
-    local without with
-    without="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "https://$dns/healthcheck" || true)"
-    with="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 -H "X-Sonare-Key: $key" "https://$dns/healthcheck" || true)"
+    local without with ip resolve=()
+    # An IPv4 address: some resolvers answer *.ts.net with IPv6 only, or not at all (this
+    # machine's did both), so ask a public one when the local one has no IPv4 answer.
+    ip="$(getent ahostsv4 "$dns" | awk '{ print $1; exit }')"
+    if [ -z "$ip" ] && command -v dig >/dev/null; then
+        ip="$(dig +short "$dns" @1.1.1.1 | grep -E '^[0-9.]+$' | head -1)"
+    fi
+    [ -n "$ip" ] && resolve=(--resolve "$dns:443:$ip")
+    without="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "${resolve[@]}" "https://$dns/healthcheck" || true)"
+    with="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "${resolve[@]}" -H "X-Sonare-Key: $key" "https://$dns/healthcheck" || true)"
     echo "  without the key: $without (want 403)   with the key: $with (want 200)"
 
     echo ""
-    echo "Piped is published. Set these on the backend (Render's environment, or sonare-backend/.env"
-    echo "for a local backend - stream URLs now go through Funnel too):"
+    echo "Piped is published. On the hosted backend (Render's environment) set:"
     echo "  PIPED_API_URL=https://$dns"
     echo "  PIPED_KEY=<PIPED_KEY from sonare-piped-backend/.env>"
-    echo "If the admin page has a Piped URL saved, set it to https://$dns as well."
+    echo "(and the admin page's Piped URL, if one is saved there)."
+    echo "A backend on this machine keeps PIPED_API_URL=http://localhost:8090 and adds"
+    echo "  PIPED_LOCAL_PROXY_URL=http://localhost:8091"
+    echo "so it plays the Funnel stream urls from the local proxy."
 }
 
 cmd_down() {
@@ -165,8 +174,8 @@ cmd_down() {
     set_env COMPOSE_PROFILES ""
     set_env PIPED_PROXY_URL "$LOCAL_PROXY"
     ./runPiped.sh up
-    echo "Piped is local only again ($LOCAL_PROXY). Point sonare-backend/.env back at"
-    echo "PIPED_API_URL=http://localhost:8090 (PIPED_KEY can stay; it is only sent to the Piped host)."
+    echo "Piped is local only again ($LOCAL_PROXY). A backend on this machine needs no change:"
+    echo "its stream urls already point at the local proxy, PIPED_LOCAL_PROXY_URL or not."
 }
 
 cmd_status() {

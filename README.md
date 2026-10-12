@@ -62,8 +62,9 @@ Render backend --https--> <machine>.<tailnet>.ts.net       --Funnel--> gate :809
 The gate (`gate/default.conf.template`, nginx) refuses any request without the key, and anything
 but GET/HEAD; Funnel addresses show up in public certificate logs, so the key is what keeps
 other people off your IP. Every web play is relayed by the backend from piped-proxy, so it uses
-this machine's upload bandwidth. While Funnel is on, stream URLs point at the Funnel address, so
-a local `sonare-backend` needs the same two settings. `./funnel.sh down` makes Piped local-only
+this machine's upload bandwidth. While Funnel is on, stream URLs point at the Funnel address; a
+`sonare-backend` on this machine keeps `PIPED_API_URL=http://localhost:8090` and adds
+`PIPED_LOCAL_PROXY_URL=http://localhost:8091`, so its relay fetches them locally. `./funnel.sh down` makes Piped local-only
 again; `./funnel.sh status` shows where things stand.
 
 ## Database password
