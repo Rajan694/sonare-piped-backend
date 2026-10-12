@@ -18,7 +18,8 @@ usage() {
     echo "           Pin bg-helper to its newest image, check, roll back on failure"
     echo "           (for \"not a bot\" / PoToken breakage)."
     echo ""
-    echo "Ports: piped 8090, piped-proxy 8091. bg-helper and postgres stay internal."
+    echo "Ports: piped 8090, piped-proxy 8091 (and the Funnel gate 8092/8093, see ./funnel.sh)."
+    echo "bg-helper and postgres stay internal."
     exit 1
 }
 
