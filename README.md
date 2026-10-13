@@ -2,7 +2,8 @@
 
 This is Sonare's fork of Piped's backend; the Sonare API (`sonare-backend`) is its only
 client. Run it with `./installPiped.sh` once and `./runPiped.sh up`: the API listens on
-127.0.0.1:8090 and piped-proxy on 127.0.0.1:8091.
+127.0.0.1:8090 and piped-proxy on 127.0.0.1:8091. For a backend on another host, see
+[Tailscale Funnel](#serving-a-backend-hosted-elsewhere-tailscale-funnel).
 
 ## When YouTube breaks something
 
@@ -32,6 +33,39 @@ while it compiles; run the bump again.
   `config.properties`). Change it when the proxy moves off localhost.
 - `PIPED_EXTRACTOR_COMMIT`: the NewPipeExtractor commit in `build.gradle`; a new one rebuilds
   the image.
+- `PIPED_KEY`, `COMPOSE_PROFILES`: for Tailscale Funnel, below. `./funnel.sh up` sets them.
+
+## Serving a backend hosted elsewhere (Tailscale Funnel)
+
+The production backend runs on Render, but Piped stays on this machine so YouTube sees a home
+IP. `./funnel.sh` publishes it without opening a port or needing sudo:
+
+```
+Render backend --https--> <machine>.<tailnet>.ts.net       --Funnel--> gate :8092 --> piped
+               --https--> <machine>.<tailnet>.ts.net:8443  --Funnel--> gate :8093 --> piped-proxy
+```
+
+1. `./funnel.sh install` (once): downloads Tailscale into `~/.local/share/sonare-tailscale`,
+   runs `tailscaled` in userspace-networking mode as the user service
+   `sonare-tailscaled.service`, and signs the machine in as `sonare-piped` (open the link it
+   prints; a free Tailscale account is enough). For Funnel to stay up after you log out:
+   `loginctl enable-linger $USER`.
+2. `./funnel.sh up`: generates `PIPED_KEY`, sets `COMPOSE_PROFILES=funnel` (starts the `gate`
+   container) and `PIPED_PROXY_URL=https://<machine>.<tailnet>.ts.net:8443`, restarts Piped, and
+   turns Funnel on for both ports. The first time, Tailscale asks you to allow HTTPS and Funnel
+   for the tailnet. It ends by checking the address from the internet side: 403 without the key,
+   200 with it.
+3. On the backend, set `PIPED_API_URL=https://<machine>.<tailnet>.ts.net` (and the admin page's
+   Piped URL, if one is saved) and `PIPED_KEY` to the same value as here. The backend sends it as
+   `X-Sonare-Key`, only to that host.
+
+The gate (`gate/default.conf.template`, nginx) refuses any request without the key, and anything
+but GET/HEAD; Funnel addresses show up in public certificate logs, so the key is what keeps
+other people off your IP. Every web play is relayed by the backend from piped-proxy, so it uses
+this machine's upload bandwidth. While Funnel is on, stream URLs point at the Funnel address; a
+`sonare-backend` on this machine keeps `PIPED_API_URL=http://localhost:8090` and adds
+`PIPED_LOCAL_PROXY_URL=http://localhost:8091`, so its relay fetches them locally. `./funnel.sh down` makes Piped local-only
+again; `./funnel.sh status` shows where things stand.
 
 ## Database password
 

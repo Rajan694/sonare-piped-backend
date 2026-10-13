@@ -29,6 +29,23 @@ services:
         restart: unless-stopped
         ports:
             - "127.0.0.1:8091:8080"
+    # Checks the shared key in front of piped and piped-proxy; Tailscale Funnel publishes these
+    # two ports for a backend hosted elsewhere (./funnel.sh). Only started with the "funnel"
+    # profile (COMPOSE_PROFILES=funnel in .env, which ./funnel.sh up sets).
+    gate:
+        image: nginx:1.27-alpine
+        restart: unless-stopped
+        profiles: ["funnel"]
+        ports:
+            - "127.0.0.1:8092:8092"
+            - "127.0.0.1:8093:8093"
+        environment:
+            - PIPED_KEY=${PIPED_KEY:-}
+        volumes:
+            - ./gate/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+        depends_on:
+            - piped
+            - piped-proxy
     bg-helper:
         image: 1337kavin/bg-helper-server@sha256:be55faab8780599cd951206f73ad1ab5b33a2c1c148eaad7f7c2403e00561729
         restart: unless-stopped
