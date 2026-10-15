@@ -7,6 +7,10 @@ COPY . /app/
 RUN --mount=type=cache,target=/root/.gradle/caches/ \
  ./gradlew shadowJar
 
+# VERSION is gitignored (upstream CI writes it), so a fresh checkout has none; Piped
+# reports "unknown" then, the same as with no file.
+RUN [ -s VERSION ] || echo unknown > VERSION
+
 FROM eclipse-temurin:21-jre
 
 RUN --mount=type=cache,target=/var/cache/apt/ \
@@ -23,7 +27,7 @@ COPY hotspot-entrypoint.sh docker-healthcheck.sh /
 
 COPY --from=build /app/build/libs/piped-1.0-all.jar /app/piped.jar
 
-COPY VERSION .
+COPY --from=build /app/VERSION .
 
 EXPOSE 8080
 
