@@ -1,6 +1,6 @@
 # PowerShell version of updatePiped.sh: pull, then .\runPiped.ps1 up (rebuilds the image only
-# when the Piped source changed). Tailscale Funnel (funnel.sh) is set up on Linux only; on
-# Windows, publish Piped with the Tailscale app if this machine serves production.
+# when the Piped source changed). With Tailscale Funnel set up (COMPOSE_PROFILES=funnel in .env)
+# it goes through .\funnel.ps1 up, so the gate and the Funnel ports come back too.
 
 Push-Location $PSScriptRoot
 $ProgressPreference = 'SilentlyContinue'
@@ -9,7 +9,7 @@ try {
 function Show-Usage {
     Write-Host "Usage: .\updatePiped.ps1 [--no-run]"
     Write-Host ""
-    Write-Host "  Pull, then start Piped."
+    Write-Host "  Pull, then start Piped (and republish it with Funnel when that is set up)."
     Write-Host "  --no-run  Stop after pulling (..\update.ps1 starts things itself)"
     Write-Host ""
     Write-Host "Refuses to pull over uncommitted changes."
@@ -47,7 +47,13 @@ if (-not $Run) {
 }
 
 Write-Host ""
-& .\runPiped.ps1 up
+$tailscale = (Get-Command tailscale.exe, tailscale -CommandType Application -ErrorAction SilentlyContinue) -or
+    ($env:ProgramFiles -and (Test-Path (Join-Path $env:ProgramFiles 'Tailscale\tailscale.exe')))
+if ((Select-String -Path .env -Pattern '^COMPOSE_PROFILES=funnel$' -CaseSensitive -Quiet) -and $tailscale) {
+    & .\funnel.ps1 up
+} else {
+    & .\runPiped.ps1 up
+}
 exit $LASTEXITCODE
 
 } finally {

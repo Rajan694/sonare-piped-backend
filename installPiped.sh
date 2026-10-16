@@ -28,7 +28,7 @@ if [ ! -f .env ]; then
 fi
 
 # Settings in .env, so the build below uses them.
-./syncEnvConfig.sh
+scripts/syncEnvConfig.sh
 echo ""
 
 # The piped service is built from this directory (sonare-piped:local), so it has

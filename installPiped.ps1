@@ -28,7 +28,7 @@ if (-not (Test-Path .env)) {
 }
 
 # Settings in .env, so the build below uses them.
-& ./syncEnvConfig.ps1
+& ./scripts/syncEnvConfig.ps1
 Write-Host ""
 
 # The piped service is built from this directory (sonare-piped:local), so it has

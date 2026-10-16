@@ -10,11 +10,12 @@
 # A setting that is empty or missing leaves its file alone. An exported variable wins over
 # .env. This never fails the caller.
 #
-#   ./syncEnvConfig.sh --set-commit <sha>
+#   scripts/syncEnvConfig.sh --set-commit <sha>
 #       The other direction, for `./runPiped.sh bump`: if .env pins a commit, replace it
 #       with <sha>, so the next start doesn't put the old one back.
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Works on the project folder, one level up from scripts/.
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$SCRIPT_DIR"
 
 # The value of $1 from the environment, else from .env (quotes stripped).
@@ -29,7 +30,7 @@ setting() {
 if [ "${1:-}" = "--set-commit" ]; then
     SHA="${2:-}"
     if ! [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
-        echo "Usage: ./syncEnvConfig.sh --set-commit <40-character commit hash>"
+        echo "Usage: scripts/syncEnvConfig.sh --set-commit <40-character commit hash>"
         exit 1
     fi
     # Only a pinned value is replaced: with none, build.gradle alone decides and stays in charge.

@@ -10,11 +10,12 @@
 # A setting that is empty or missing leaves its file alone. An environment variable wins
 # over .env. This never fails the caller.
 #
-#   .\syncEnvConfig.ps1 --set-commit <sha>
+#   .\scripts\syncEnvConfig.ps1 --set-commit <sha>
 #       The other direction, for `.\runPiped.ps1 bump`: if .env pins a commit, replace it
 #       with <sha>, so the next start doesn't put the old one back.
 
-Push-Location $PSScriptRoot
+# Works on the project folder, one level up from scripts\.
+Push-Location (Split-Path $PSScriptRoot -Parent)
 try {
 
 # Whole-file reads and writes, so line endings and the bind-mounted file's inode survive.
@@ -37,7 +38,7 @@ function Get-Setting($Name) {
 if ($args.Count -gt 0 -and $args[0] -eq '--set-commit') {
     $sha = "$($args[1])"
     if ($sha -cnotmatch '^[0-9a-f]{40}$') {
-        Write-Host "Usage: .\syncEnvConfig.ps1 --set-commit <40-character commit hash>"
+        Write-Host "Usage: .\scripts\syncEnvConfig.ps1 --set-commit <40-character commit hash>"
         exit 1
     }
     # Only a pinned value is replaced: with none, build.gradle alone decides and stays in charge.

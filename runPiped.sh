@@ -10,7 +10,7 @@ usage() {
     echo "  down     Stop and remove the containers"
     echo "  logs     Follow the piped container logs"
     echo "  status   Show container state and whether the API is healthy"
-    echo "  check    Smoke-test search, albums, streams and audio (checkPiped.sh)"
+    echo "  check    Smoke-test search, albums, streams and audio (scripts/checkPiped.sh)"
     echo "  bump [<commit>]"
     echo "           Move NewPipeExtractor to <commit> (default: the newest on its dev"
     echo "           branch), rebuild, check, and roll back if the check fails."
@@ -116,8 +116,8 @@ bump_extractor() {
     fi
     docker compose up -d --no-build piped || return 1
 
-    if wait_healthy && ./checkPiped.sh; then
-        ./syncEnvConfig.sh --set-commit "$new"
+    if wait_healthy && scripts/checkPiped.sh; then
+        scripts/syncEnvConfig.sh --set-commit "$new"
         backup_image
         echo "NewPipeExtractor is now ${new:0:12}. Commit build.gradle to keep it."
         return 0
@@ -153,7 +153,7 @@ bump_bg_helper() {
     sed -i "s|$old|$new|" docker-compose.yml
     docker compose up -d --no-build bg-helper || return 1
     sleep 5
-    if ./checkPiped.sh; then
+    if scripts/checkPiped.sh; then
         echo "bg-helper is now pinned to ${new#*@}. Commit docker-compose.yml to keep it."
         return 0
     fi
@@ -182,7 +182,7 @@ case "$MODE" in
         exit 0
         ;;
     check)
-        exec ./checkPiped.sh
+        exec scripts/checkPiped.sh
         ;;
     bump)
         shift
@@ -222,7 +222,7 @@ fi
 # Settings in .env: the extractor commit (build.gradle, so it rebuilds below) and the proxy
 # URL (config.properties, which Piped only reads at startup).
 CONFIG_BEFORE="$(sha256sum config.properties)"
-./syncEnvConfig.sh
+scripts/syncEnvConfig.sh
 [ "$CONFIG_BEFORE" != "$(sha256sum config.properties)" ] && CONFIG_CHANGED=1 || CONFIG_CHANGED=0
 echo ""
 
