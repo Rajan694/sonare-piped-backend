@@ -5,9 +5,12 @@ client. Run it with `./installPiped.sh` once and `./runPiped.sh up`: the API lis
 127.0.0.1:8090 and piped-proxy on 127.0.0.1:8091. For a backend on another host, see
 [Tailscale Funnel](#serving-a-backend-hosted-elsewhere-tailscale-funnel).
 
+**[HOSTING.md](HOSTING.md)** is the step-by-step guide: first-time setup, start, stop and
+update, publishing for Render, moving to another device, and troubleshooting.
+
 ## When YouTube breaks something
 
-`./runPiped.sh check` runs `checkPiped.sh`, which searches for a song, opens an album, extracts
+`./runPiped.sh check` runs `scripts/checkPiped.sh`, which searches for a song, opens an album, extracts
 its streams and reads audio past the first megabyte. That covers the usual failures: extractor
 changes (empty search or albums), bot detection (no audio-only formats, "not a bot" errors) and
 stream URLs that 403 after ~1 MB.
@@ -27,7 +30,7 @@ while it compiles; run the bump again.
 
 `.env` (copied from `.env.example` by `./installPiped.sh`) holds the deploy settings.
 `./runPiped.sh up` and `./installPiped.sh` copy them into the Piped files through
-`syncEnvConfig.sh`; an empty value leaves the file as it is.
+`scripts/syncEnvConfig.sh`; an empty value leaves the file as it is.
 
 - `PIPED_PROXY_URL`: the piped-proxy base Piped rewrites media URLs to (`PROXY_PART` in
   `config.properties`). Change it when the proxy moves off localhost.
@@ -53,8 +56,8 @@ Render backend --https--> <machine>.<tailnet>.ts.net       --Funnel--> gate :809
 2. `./funnel.sh up`: generates `PIPED_KEY`, sets `COMPOSE_PROFILES=funnel` (starts the `gate`
    container) and `PIPED_PROXY_URL=https://<machine>.<tailnet>.ts.net:8443`, restarts Piped, and
    turns Funnel on for both ports. The first time, Tailscale asks you to allow HTTPS and Funnel
-   for the tailnet. It ends by checking the address from the internet side: 403 without the key,
-   200 with it.
+   for the tailnet. It ends by checking each relay address from the internet side (403 without
+   the key, 200 with it), and starts the `sonare-funnel-check` timer, below.
 3. On the backend, set `PIPED_API_URL=https://<machine>.<tailnet>.ts.net` (and the admin page's
    Piped URL, if one is saved) and `PIPED_KEY` to the same value as here. The backend sends it as
    `X-Sonare-Key`, only to that host.
@@ -66,6 +69,62 @@ this machine's upload bandwidth. While Funnel is on, stream URLs point at the Fu
 `sonare-backend` on this machine keeps `PIPED_API_URL=http://localhost:8090` and adds
 `PIPED_LOCAL_PROXY_URL=http://localhost:8091`, so its relay fetches them locally. `./funnel.sh down` makes Piped local-only
 again; `./funnel.sh status` shows where things stand.
+
+### When one relay address goes dead
+
+The Funnel name resolves to more than one Tailscale relay address, and each client uses
+whichever one it gets. One can lose its link to this machine while the others work. Clients
+sent there get ECONNRESET, which the backend reports as `UPSTREAM_UNAVAILABLE ... (ECONNRESET)`,
+yet a check from here can still pass. Restarting `sonare-tailscaled` makes it reconnect to the
+relays, which fixes it.
+
+`./funnel.sh check` checks every address separately and restarts `sonare-tailscaled` if one
+gets no answer while the gate answers locally. It retries a dead address for 30 s first and
+restarts at most once every 30 minutes. `./funnel.sh up` installs the `sonare-funnel-check`
+user timer, which runs it every 5 minutes (`journalctl --user -u sonare-funnel-check`).
+`./funnel.sh down` removes it. `./funnel.sh status` lists each address's answers.
+
+### On Windows
+
+`.\funnel.ps1` takes the same commands as `funnel.sh`, with a few differences:
+
+- `install` installs the regular Tailscale app with winget, which runs as a Windows service and
+  puts the whole machine on the tailnet (Windows has no userspace mode). It signs in as
+  `sonare-piped` with `--unattended`, so Funnel stays up after you sign out of Windows. A
+  machine that is already signed in keeps its name, which then goes in `PIPED_API_URL`.
+- Instead of the systemd timer, `up` registers the `sonare-funnel-check` scheduled task. It runs
+  `.\funnel.ps1 check` every 5 minutes while you're signed in to Windows. It logs to
+  `%LOCALAPPDATA%\sonare-tailscale\funnel-check.log`.
+- Restarting the Tailscale service needs an elevated prompt, and the task isn't elevated. So
+  `check` falls back to `tailscale down` and `tailscale up`, which should reconnect to the
+  relays the same way. The Windows path hasn't been tried on a real Windows machine yet.
+- `.\updatePiped.ps1` and `.\update.ps1 prod` go through `.\funnel.ps1 up` once Funnel is
+  set up, like the `.sh` scripts.
+
+## Moving Piped to another device
+
+Any Linux machine with Docker (compose v2), systemd, curl, python3 and openssl works, on x86_64
+or arm64. So does Windows 10/11 with Docker Desktop, using the `.ps1` scripts (see [On
+Windows](#on-windows)). A Raspberry Pi 4/5 is enough: the stack runs in about 400 MB, but
+building the Piped image wants 2 GB or more. It needs a home connection, not a VPS, because
+YouTube blocks datacenter IPs. Every web play is relayed from it, so its upload speed matters.
+
+1. On the old machine: `./funnel.sh down`, then remove the `sonare-piped` machine from the
+   [Tailscale admin console](https://login.tailscale.com/admin/machines). Otherwise the new
+   machine gets `sonare-piped-1` and a different address.
+2. On the new machine: clone this repo and copy `.env` and `config.properties` from the old
+   one. Keep the same `PIPED_KEY` and `PIPED_DB_PASSWORD` (the latter must still match
+   `hibernate.connection.password`). `data/` doesn't need copying; Sonare keeps nothing in
+   Piped's database.
+3. `./installPiped.sh`, `./funnel.sh install` (sign in to the same Tailscale account), then
+   `loginctl enable-linger $USER` so it keeps running after logout. Then run `./funnel.sh up`.
+   On Windows: `.\installPiped.ps1`, `.\funnel.ps1 install`, `.\funnel.ps1 up`.
+4. With the same name, tailnet and key, the Render backend needs no change. If the address or
+   key changed, update `PIPED_API_URL` and `PIPED_KEY` in Render's environment, and the admin
+   page's Piped URL if one is saved there (it overrides the environment).
+5. A `sonare-backend` on the old machine now uses the Funnel too:
+   `PIPED_API_URL=https://<machine>.<tailnet>.ts.net`, the same `PIPED_KEY`, and no
+   `PIPED_LOCAL_PROXY_URL`.
 
 ## Database password
 

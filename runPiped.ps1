@@ -12,7 +12,7 @@ function Show-Usage {
     Write-Host "  down     Stop and remove the containers"
     Write-Host "  logs     Follow the piped container logs"
     Write-Host "  status   Show container state and whether the API is healthy"
-    Write-Host "  check    Smoke-test search, albums, streams and audio (checkPiped.ps1)"
+    Write-Host "  check    Smoke-test search, albums, streams and audio (scripts\checkPiped.ps1)"
     Write-Host "  bump [<commit>]"
     Write-Host "           Move NewPipeExtractor to <commit> (default: the newest on its dev"
     Write-Host "           branch), rebuild, check, and roll back if the check fails."
@@ -134,7 +134,7 @@ function Wait-Healthy {
 }
 
 function Invoke-Check {
-    & ./checkPiped.ps1
+    & ./scripts/checkPiped.ps1
     $LASTEXITCODE -eq 0
 }
 
@@ -192,7 +192,7 @@ function Update-Extractor([string]$New) {
     if ($LASTEXITCODE -ne 0) { return $false }
 
     if ((Wait-Healthy) -and (Invoke-Check)) {
-        & ./syncEnvConfig.ps1 --set-commit $New | Out-Host
+        & ./scripts/syncEnvConfig.ps1 --set-commit $New | Out-Host
         Save-ImageBackup
         Write-Host "NewPipeExtractor is now $(Short $New). Commit build.gradle to keep it."
         return $true
@@ -263,7 +263,7 @@ switch ($Mode) {
         exit 0
     }
     'check' {
-        & ./checkPiped.ps1
+        & ./scripts/checkPiped.ps1
         exit $LASTEXITCODE
     }
     'bump' {
@@ -304,7 +304,7 @@ if (-not (Test-Path config.properties)) {
 # Settings in .env: the extractor commit (build.gradle, so it rebuilds below) and the proxy
 # URL (config.properties, which Piped only reads at startup).
 $configBefore = (Get-FileHash config.properties).Hash
-& ./syncEnvConfig.ps1
+& ./scripts/syncEnvConfig.ps1
 $configChanged = $configBefore -ne (Get-FileHash config.properties).Hash
 Write-Host ""
 

@@ -4,8 +4,8 @@
 # extraction (adaptive audio needs bg-helper's PoTokens) and reading audio past the first
 # ~1 MB (some client URLs serve only that much, then 403). Exits non-zero if any fail.
 #
-#   .\checkPiped.ps1                    against http://127.0.0.1:8090
-#   $env:PIPED_URL='http://host:8090'; .\checkPiped.ps1
+#   .\scripts\checkPiped.ps1                  against http://127.0.0.1:8090
+#   $env:PIPED_URL='http://host:8090'; .\scripts\checkPiped.ps1
 #
 # runPiped.ps1 runs it as `.\runPiped.ps1 check`, and after every `.\runPiped.ps1 bump`.
 
@@ -91,6 +91,13 @@ if ($videoId) {
         Pass "streams: $($audio.Count) audio formats for $videoId"
         # The largest-bitrate audio, the one playback picks.
         $audioUrl = ($audio | Sort-Object { [long]$_.bitrate } -Descending | Select-Object -First 1).url
+        # With Funnel on, piped-proxy urls (a `host=` parameter) name the Funnel address, whose
+        # gate wants the key. For a Piped on this machine, read them from the local proxy, as a
+        # backend here does (PIPED_LOCAL_PROXY_URL).
+        if ($PipedUrl -match '^https?://(127\.0\.0\.1|localhost)[:/]' -and $audioUrl -match '[?&]host=') {
+            $local = if ($env:PIPED_PROXY_LOCAL) { $env:PIPED_PROXY_LOCAL } else { 'http://127.0.0.1:8091' }
+            $audioUrl = $audioUrl -replace '^https?://[^/]+', $local
+        }
         $code = (Invoke-Http $audioUrl 30 1048576 1049599).Status
         if ($code -eq 206 -or $code -eq 200) {
             Pass "audio: bytes past 1 MB load (HTTP $code)"

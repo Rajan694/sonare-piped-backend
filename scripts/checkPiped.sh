@@ -4,8 +4,8 @@
 # extraction (adaptive audio needs bg-helper's PoTokens) and reading audio past the first
 # ~1 MB (some client URLs serve only that much, then 403). Exits non-zero if any fail.
 #
-#   ./checkPiped.sh                    against http://127.0.0.1:8090
-#   PIPED_URL=http://host:8090 ./checkPiped.sh
+#   scripts/checkPiped.sh                  against http://127.0.0.1:8090
+#   PIPED_URL=http://host:8090 scripts/checkPiped.sh
 #
 # runPiped.sh runs it as `./runPiped.sh check`, and after every `./runPiped.sh bump`.
 
@@ -63,6 +63,12 @@ if [ -n "$VIDEO_ID" ]; then
         pass "streams: $AUDIO_COUNT audio formats for $VIDEO_ID"
         # The largest-bitrate audio, the one playback picks.
         AUDIO_URL="$(jq -r '[.audioStreams[] | select(.mimeType | startswith("audio/"))] | sort_by(-.bitrate) | .[0].url' <<<"$STREAMS")"
+        # With Funnel on, piped-proxy urls (a `host=` parameter) name the Funnel address, whose
+        # gate wants the key. For a Piped on this machine, read them from the local proxy, as a
+        # backend here does (PIPED_LOCAL_PROXY_URL).
+        if [[ "$PIPED_URL" =~ ^https?://(127\.0\.0\.1|localhost)[:/] ]] && [[ "$AUDIO_URL" == *[?\&]host=* ]]; then
+            AUDIO_URL="$(sed -E "s#^https?://[^/]+#${PIPED_PROXY_LOCAL:-http://127.0.0.1:8091}#" <<<"$AUDIO_URL")"
+        fi
         CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 -r 1048576-1049599 "$AUDIO_URL")"
         if [ "$CODE" = "206" ] || [ "$CODE" = "200" ]; then
             pass "audio: bytes past 1 MB load (HTTP $CODE)"
