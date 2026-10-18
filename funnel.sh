@@ -38,7 +38,8 @@ usage() {
     echo "  down     Stop publishing, stop the gate and the timer, and put Piped's proxy URL"
     echo "           back to $LOCAL_PROXY"
     echo "  status   Tailscale, Funnel, gate and timer state, and each relay address's answer"
-    echo "  check    Check each relay address and restart $UNIT if one gets no answer"
+    echo "  check    Check each relay address and restart $UNIT if one gets no answer or the"
+    echo "           name doesn't resolve"
     echo "           (what the timer runs)"
     exit 1
 }
@@ -136,12 +137,19 @@ wait_relays() {
 
 # Checks every relay address, waiting up to <seconds> for them to come good (a new certificate
 # takes a minute). If a relay still gets no answer while the gate does answer here, restarting
-# tailscaled brings it back: it reconnects to the relays. <cooldown> seconds since the last
-# such restart skips it, so a relay that stays broken doesn't restart it every few minutes.
+# tailscaled brings it back: it reconnects to the relays. The same goes for a hostname that
+# doesn't resolve at all: Tailscale withdraws the public record now and then (2026-10-17 it
+# stayed gone for a day until a restart). <cooldown> seconds since the last such restart skips
+# it, so a relay that stays broken doesn't restart it every few minutes.
 heal() {
-    local key="$1" wait="$2" cooldown="${3:-0}" gate last
+    local key="$1" wait="$2" cooldown="${3:-0}" gate last problem
     wait_relays "$key" "$wait" || true
-    if [ "$RELAYS" -gt 0 ] && [ "$DEAD" -gt 0 ]; then
+    if [ "$RELAYS" -eq 0 ] || [ "$DEAD" -gt 0 ]; then
+        if [ "$RELAYS" -eq 0 ]; then
+            problem="$DNS doesn't resolve"
+        else
+            problem="$DEAD of $RELAYS relay addresses get no answer"
+        fi
         gate="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:8092/healthcheck || true)"
         last="$(cat "$LAST_HEAL" 2>/dev/null || echo 0)"
         if [ "$gate" != 403 ]; then
@@ -151,11 +159,11 @@ heal() {
             return 1
         elif [ $(($(date +%s) - last)) -lt "$cooldown" ]; then
             printf '%s' "$REPORT"
-            echo "$DEAD of $RELAYS relay addresses get no answer; $UNIT was restarted less than $((cooldown / 60)) minutes ago, so not again yet."
+            echo "$problem; $UNIT was restarted less than $((cooldown / 60)) minutes ago, so not again yet."
             return 1
         fi
         printf '%s' "$REPORT"
-        echo "$DEAD of $RELAYS relay addresses get no answer - restarting $UNIT so it reconnects to them."
+        echo "$problem - restarting $UNIT so it reconnects."
         date +%s > "$LAST_HEAL"
         systemctl --user restart "$UNIT"
         sleep 5
