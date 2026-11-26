@@ -24,3 +24,23 @@ jobs:
       # The task the Docker image builds (Dockerfile); `build` also ran upstream's test setup.
       - name: Build the server jar
         run: ./gradlew shadowJar
+
+  # Telegram message when the run ends (success, failure or cancelled).
+  # Reusable workflow + secrets: https://github.com/Rajan694/github-actions
+  notify:
+    name: Telegram Notification
+    if: always()
+    needs: [build]
+    uses: Rajan694/github-actions/.github/workflows/telegram-notify.yml@v1
+    with:
+      status: ${{ contains(needs.*.result, 'failure') && 'failure' || contains(needs.*.result, 'cancelled') && 'cancelled' || 'success' }}
+      workflow_name: ${{ github.workflow }}
+      repository: ${{ github.repository }}
+      branch: ${{ github.head_ref || github.ref_name }}
+      commit: ${{ github.event.pull_request.head.sha || github.sha }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      actor: ${{ github.actor }}
+      is_deployment: false
+    secrets:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
