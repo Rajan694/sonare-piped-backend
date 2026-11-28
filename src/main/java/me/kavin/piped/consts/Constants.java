@@ -32,6 +32,9 @@ public class Constants {
     public static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0";
 
     public static final int PORT;
+    // Address the API listens on. Empty (the default) means every interface, as upstream does; a
+    // phone host sets 127.0.0.1 so Piped isn't reachable from the Wi-Fi it happens to be on.
+    public static final String BIND_ADDRESS;
     public static final String HTTP_WORKERS;
 
     public static final String PROXY_PART;
@@ -133,6 +136,7 @@ public class Constants {
             }
 
             PORT = Integer.parseInt(getProperty(prop, "PORT", "8080"));
+            BIND_ADDRESS = getProperty(prop, "BIND_ADDRESS", "");
             HTTP_WORKERS = getProperty(prop, "HTTP_WORKERS",
                     String.valueOf(Runtime.getRuntime().availableProcessors()));
             PROXY_PART = getProperty(prop, "PROXY_PART");

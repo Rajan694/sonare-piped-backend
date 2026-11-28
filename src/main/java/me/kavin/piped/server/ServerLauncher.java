@@ -522,7 +522,9 @@ public class ServerLauncher extends MultithreadedHttpServerLauncher {
             Config config() {
                 return Config.create()
                         .with("http.listenAddresses",
-                                Config.ofValue(ofInetSocketAddress(), new InetSocketAddress(Constants.PORT)))
+                                Config.ofValue(ofInetSocketAddress(), Constants.BIND_ADDRESS.isBlank()
+                                        ? new InetSocketAddress(Constants.PORT)
+                                        : new InetSocketAddress(Constants.BIND_ADDRESS, Constants.PORT)))
                         .with("bytebuf.useWatchdog", String.valueOf(true))
                         .with("workers", Constants.HTTP_WORKERS);
             }

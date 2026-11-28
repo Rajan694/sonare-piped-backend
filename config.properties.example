@@ -1,5 +1,10 @@
 # The port to Listen on.
 PORT:8080
+
+# Address the API listens on. Leave it out to listen on every interface (Docker needs that);
+# sonare-piped-host sets 127.0.0.1 on phones.
+# BIND_ADDRESS:127.0.0.1
+
 # The number of workers to use for the server
 HTTP_WORKERS:2
 
